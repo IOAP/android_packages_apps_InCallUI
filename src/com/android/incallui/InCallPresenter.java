@@ -21,6 +21,7 @@ import com.google.android.collect.Sets;
 import com.google.common.base.Preconditions;
 
 import android.content.Context;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.provider.Settings;
 import android.os.PowerManager;
@@ -57,6 +58,7 @@ public class InCallPresenter implements CallList.Listener {
     private Context mContext;
     private CallList mCallList;
     private InCallActivity mInCallActivity;
+    private InCallCardActivity mInCallCardActivity;
     private InCallState mInCallState = InCallState.NO_CALLS;
     private AccelerometerListener mAccelerometerListener;
     private ProximitySensor mProximitySensor;
@@ -138,12 +140,22 @@ public class InCallPresenter implements CallList.Listener {
     }
 
     private void attemptFinishActivity() {
+        // Finish our presenter card in all cases, we won't need it anymore whatever might
+        // happen.
+        if (mInCallCardActivity != null) {
+            mInCallCardActivity.finish();
+        }
+
         final boolean doFinish = (mInCallActivity != null && isActivityStarted());
         Log.i(this, "Hide in call UI: " + doFinish);
 
         if (doFinish) {
             mInCallActivity.finish();
         }
+    }
+
+    public void setCardActivity(InCallCardActivity inCallCardActivity) {
+        mInCallCardActivity = inCallCardActivity;
     }
 
     /**
@@ -679,12 +691,22 @@ public class InCallPresenter implements CallList.Listener {
             mCallUiInBackground = pm.isScreenOn() && !isKeyguardShowing;
         }
 
-        mStatusBarNotifier.updateNotificationAndLaunchIncomingCallUi(
-                inCallState, mCallList, mCallUiInBackground);
+        boolean nonIntrusiveDisabled = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.NON_INTRUSIVE_INCALL, 1) == 0;
+
+        final PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+        // If the screen is on, we'll prefer to not interrupt the user too much and slide in a card
+        if (pm.isScreenOn() && !nonIntrusiveDisabled) {
+            Intent intent = new Intent(mContext, InCallCardActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            mContext.startActivity(intent);
+        } else {
+            mStatusBarNotifier.updateNotificationAndLaunchIncomingCallUi(inCallState, mCallList, mCallUiInBackground);
+        }
     }
 
     /**
-     * Starts the incoming call Ui immediately used by the incoming call
+  * Starts the incoming call Ui immediately used by the incoming call
      * notification sent from framework's notification mechanism
      */
     public void startIncomingCallUi() {
@@ -693,6 +715,13 @@ public class InCallPresenter implements CallList.Listener {
         mStatusBarNotifier.cancelInCall();
         mStatusBarNotifier.updateNotificationAndLaunchIncomingCallUi(
                 InCallState.INCALL, mCallList, false);
+    }
+
+    /**
+     * Starts the incoming call Ui immediately, bypassing the card UI
+     */
+    public void startIncomingCallUi(InCallState inCallState) {
+        mStatusBarNotifier.updateNotificationAndLaunchIncomingCallUi(inCallState, mCallList, mCallUiInBackground);
     }
 
     /**

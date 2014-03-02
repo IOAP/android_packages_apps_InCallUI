@@ -162,7 +162,7 @@ public class StatusBarNotifier implements InCallPresenter.InCallStateListener {
      *
      * @see #updateInCallNotification(boolean,InCallState,CallList)
      */
-    public void updateNotificationAndLaunchIncomingCallUi(
+  public void updateNotificationAndLaunchIncomingCallUi(
             InCallState state, CallList callList, boolean isCallUiInBackground) {
         // If the user want to have the UI in background set it no matter what
         mIsCallUiInBackground = isCallUiInBackground;
@@ -354,11 +354,8 @@ public class StatusBarNotifier implements InCallPresenter.InCallStateListener {
         if (state == Call.State.INCOMING) {
             addAnswerAction(builder);
             addDismissAction(builder);
-            if (!allowFullScreenIntent || mIsCallUiInBackground) {
-                // Call UI not active - set statusbar text
-                builder.setTicker(contentTitle);
-            }
         }
+
 
         /*
          * Fire off the notification
@@ -528,20 +525,21 @@ public class StatusBarNotifier implements InCallPresenter.InCallStateListener {
                 createAnswerIncomingCallPendingIntent(mContext));
     }
 
+
+
     /**
      * Adds fullscreen intent to the builder.
      */
     private void configureFullScreenIntent(Notification.Builder builder, PendingIntent intent,
             Call call) {
-
         if (!mIsCallUiInBackground) {
-            // Ok, we actually want to launch the incoming call
-            // UI at this point (in addition to simply posting a notification
-            // to the status bar).  Setting fullScreenIntent will cause
-            // the InCallScreen to be launched immediately *unless* the
-            // current foreground activity is marked as "immersive".
-            Log.d(this, "- Setting fullScreenIntent: " + intent);
-            builder.setFullScreenIntent(intent, true);
+        // Ok, we actually want to launch the incoming call
+        // UI at this point (in addition to simply posting a notification
+        // to the status bar).  Setting fullScreenIntent will cause
+        // the InCallScreen to be launched immediately *unless* the
+        // current foreground activity is marked as "immersive".
+        Log.d(this, "- Setting fullScreenIntent: " + intent);
+        builder.setFullScreenIntent(intent, true);
         } else {
             // We do not want to launch the incoming call UI so go ahead and just
             // show the notification
@@ -617,6 +615,7 @@ public class StatusBarNotifier implements InCallPresenter.InCallStateListener {
                 context, NotificationBroadcastReceiver.class);
         return PendingIntent.getBroadcast(context, 0, intent, 0);
     }
+
 
     /**
      * Returns PendingIntent for dimiss the incoming call. This will typically be used from
